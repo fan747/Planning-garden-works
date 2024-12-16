@@ -6,10 +6,14 @@ axios.defaults.baseURL = "http://localhost:3000";
 
 
 const gardenWorkTasks = ref([])
+const masks = ref({
+  modelValue: 'YYYY-MM-DD',
+});
 var taskName = ref('')
 var taskType = ref('')
 var taskDescription = ref('')
 var taskData = ref('')
+var calendarAttributes = ref([])
 
 function generateRandomString(length = 32) {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -20,6 +24,17 @@ function generateRandomString(length = 32) {
     return result;
 }
 
+function initializeCalendarAttributes() { 
+    let index = 0;
+    gardenWorkTasks.value.forEach(element => {       
+        let date = new Date(element.date)
+        console.log(date);
+        calendarAttributes.value[index] = {dates : [date], popover: {label: element.description}, dot: {color: element.is_finished ? 'gray' : 'green',}};
+        index++;
+    });
+    console.log(calendarAttributes.value);
+}
+
 async function loadGardenWorkTask() {
     try {
         let user_id_key = loadUserIDFromLocalStorage();
@@ -28,6 +43,7 @@ async function loadGardenWorkTask() {
                 user_id: user_id_key
             }});
         gardenWorkTasks.value = response.data;
+        initializeCalendarAttributes();
         console.log(gardenWorkTasks.value)
     }
     catch (error) {
@@ -120,6 +136,9 @@ onMounted(() => {
                 </div>    
             </li>
         </ul>
+    </section>
+    <section>
+            <VDatePicker :masks="masks" :attributes="calendarAttributes"/>
     </section>
 </template>
 

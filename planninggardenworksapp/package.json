@@ -12,6 +12,7 @@
     "start": "nodemon index.js"
   },
   "dependencies": {
+    "@popperjs/core": "^2.11.8",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
@@ -19,6 +20,7 @@
     "mongoose": "^8.8.4",
     "nodemon": "^3.1.7",
     "pinia": "^2.2.6",
+    "v-calendar": "^3.1.2",
     "vue": "^3.5.12",
     "vue-router": "^4.4.5"
   },
