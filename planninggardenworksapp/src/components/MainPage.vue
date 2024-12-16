@@ -1,6 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { GardenWorkTask } from "@/models/GardenWorkTask"
+import axios from "axios"
+axios.defaults.baseURL = "http://localhost:3000";
+
 
 const gardenWorkTasks = ref([])
 var taskName = ref('')
@@ -8,36 +11,75 @@ var taskType = ref('')
 var taskDescription = ref('')
 var taskData = ref('')
 
-function saveGardenWorkTaskToLocalStorage(taskName, taskType, taskDescription, taskData) {
-    const newGardenWorkTask = new GardenWorkTask(taskName, taskType, taskDescription, taskData);
-    localStorage.setItem(taskName, JSON.stringify(newGardenWorkTask));
-    console.log(newGardenWorkTask.name + " added to local storage!")
+function generateRandomString(length = 32) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
 }
 
-function loadGardenWorkTaskFromLocalStorage() {
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        const value = localStorage.getItem(key);
-        
-        try {
-            const parsedGardenWorkTask = JSON.parse(value);
-            
-            if (parsedGardenWorkTask && typeof parsedGardenWorkTask === 'object' && 
-                'name' in parsedGardenWorkTask && 'type' in parsedGardenWorkTask) {
-                gardenWorkTasks.value.push(Object.assign(new GardenWorkTask(), parsedGardenWorkTask));
-                console.log(parsedGardenWorkTask.name + " loaded from local storage!");
-            }
-        } catch (error) {
-            console.warn(`Failed to parse item with key "${key}" from localStorage:`, error);
-        }
+async function loadGardenWorkTask() {
+    try {
+        let user_id_key = loadUserIDFromLocalStorage();
+        let response = await axios.get('/garden-tasks', {
+            params: {
+                user_id: user_id_key
+            }});
+        gardenWorkTasks.value = response.data;
+        console.log(gardenWorkTasks.value)
+    }
+    catch (error) {
+        console.error("Error fetching tasks:", error);
     }
 }
 
-function saveGardenWorkTask(taskName, taskType, taskDescription, taskData) {
-    saveGardenWorkTaskToLocalStorage(taskName, taskType, taskDescription, taskData);
-    loadGardenWorkTaskFromLocalStorage(); 
-    console.log(taskName + " saved to storage!")
+async function saveGardenWorkTask(taskName, taskType, taskDescription, taskData) {
+    try {
+        await axios.post('/garden-tasks/', {
+            user_id: loadUserIDFromLocalStorage(),
+            name: taskName,
+            description: taskDescription,
+            task_type: taskType,
+            date: taskData
+        });
+        console.log("Tasks added!");
+        loadGardenWorkTask();
+    } catch (error) {
+        console.error("Error saving task:", error);
+    }
 }
+
+function loadUserIDFromLocalStorage() {
+    let user_id = localStorage.getItem('userID');   
+
+    if (!user_id) {
+        user_id = generateRandomString();
+        localStorage.setItem('userID', user_id.toString());
+    }
+    return user_id.toString();
+}
+
+async function switchIsFinished(taskId, isFinished) {
+    try {
+        await axios.put('/garden-tasks/', {
+            is_finished: !isFinished 
+        }, {
+            params: {
+                id: taskId 
+            }
+        });
+        console.log("Task status updated!");
+        loadGardenWorkTask();
+    } catch (error) {
+        console.error("Error updating task status:", error);
+    }
+}
+
+onMounted(() => {
+    loadGardenWorkTask();
+});
 </script>
 
 <template>
@@ -52,6 +94,7 @@ function saveGardenWorkTask(taskName, taskType, taskDescription, taskData) {
                 <option value="Полив">Полив</option>
                 <option value="Удобрение">Удобрение</option>
                 <option value="Обрезка">Обрезка</option>
+                <option value="Другое">Другое</option>
             </select>
 
             <label for="taskDescription">Task description: </label>
@@ -63,6 +106,26 @@ function saveGardenWorkTask(taskName, taskType, taskDescription, taskData) {
             <button type="submit" @click.prevent="saveGardenWorkTask(taskName, taskType, taskDescription, taskData)">Save Task</button>
         </form>
     </section>
+    <section>
+        <h2>Garden Work Tasks:</h2>
+        <ul>
+            <li v-for="task in gardenWorkTasks" :key="task.id">
+                <div v-if="task.is_finished" class="Finished">
+                    <strong>{{ task.name }}</strong>: {{ task.description }} - {{ task.task_type }} - {{ task.date }}
+                    <input type="checkbox" @input="switchIsFinished(task._id, task.is_finished)" checked required/>
+                </div>
+                <div v-else>
+                    <strong>{{ task.name }}</strong>: {{ task.description }} - {{ task.task_type }} - {{ task.date }}
+                    <input type="checkbox" @input="switchIsFinished(task._id, task.is_finished)"  required/>
+                </div>    
+            </li>
+        </ul>
+    </section>
 </template>
 
-<style scoped></style>
+<style scoped>
+.Finished {
+    text-decoration: line-through
+}
+
+</style>
