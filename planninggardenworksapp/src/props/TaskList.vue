@@ -1,8 +1,8 @@
 <template>
     <ul>
         <li v-for="task in tasks" :key="task.id">
-            <div v-if="task.is_finished" class="Finished taskContainer">
-                <div class="task-info">
+            <div v-if="task.is_finished" class="taskContainer">
+                <div class="task-info finished">
                     <p>{{ task.name }} : {{ task.description }} - {{ task.task_type }} - {{ task.date }}</p>
                 </div>
                 <input type="checkbox" @input="switchIsFinished(task._id, task.is_finished)" checked required />
@@ -12,7 +12,7 @@
                 <div class="task-info">
                     <p>{{ task.name }} : {{ task.description }} - {{ task.task_type }} - {{ task.date }}</p>
                 </div>
-                <input type="checkbox" @input="switchIsFinished(task._id, task.is_finished)" checked required />
+                <input type="checkbox" @input="switchIsFinished(task._id, task.is_finished)" required />
                 <button @click.prevent="deleteTask(task._id)">Удалить</button>
             </div>
         </li>
@@ -40,6 +40,9 @@
   </script>
   
   <style scoped>
+  .finished{
+    text-decoration: line-through;
+  }
   .taskContainer{
     display: flex;
     text-align: center;

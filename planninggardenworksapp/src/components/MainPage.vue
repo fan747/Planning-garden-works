@@ -22,6 +22,7 @@ var taskData = ref('')
 var calendarAttributes = ref([])
 var selectedMonth = ref()
 var currentAdvice = ref('')
+var currentAdviceLink = ref('')
 
 async function loadAdvices() {
     try {
@@ -36,6 +37,8 @@ async function loadAdvices() {
 function getAdvice() {
     if (advices.value.length > 0) {
         currentAdvice.value = advices.value.find(item => item.month === selectedMonth.value).data
+        currentAdviceLink.value = advices.value.find(item => item.month === selectedMonth.value).list_of_work_link;
+        console.log(currentAdviceLink.value)
     }
 }
 
@@ -88,12 +91,12 @@ async function saveGardenWorkTask(taskName, taskType, taskDescription, taskData)
             date: taskData
         });
         console.log("Tasks added!");
-        toast.success("Tasks successfully added!", { timeout: 2000 });
+        toast.success("Задание успешно добавлено!", { timeout: 2000 });
         loadGardenWorkTasks();
         resetForm();
     } catch (error) {
         console.error("Error saving task:", error);
-        toast.error("Fill in all the fields!", { timeout: 2000 });
+        toast.error("Заполните все поля!", { timeout: 2000 });
     }
 }
 
@@ -136,6 +139,7 @@ async function switchIsFinished(taskId, isFinished) {
             }
         });
         console.log("Task status updated!");
+        toast.success("Задание успешно изменено!", { timeout: 2000 });
         loadGardenWorkTasks();
     } catch (error) {
         console.error("Error updating task status:", error);
@@ -150,7 +154,7 @@ async function deleteGardenWorkTask(taskId) {
             }
         });
         console.log("Task status deleted!");
-        toast.success("Tasks successfully deleted!", { timeout: 2000 });
+        toast.success("Задание успешно удалено!", { timeout: 2000 });
         loadGardenWorkTasks();
     } catch (error) {
         console.error("Error updating task status:", error);
@@ -228,64 +232,115 @@ onMounted(() => {
 </script>
 
 <template>
+    <div class="container">
     <header class="header">
-    <div class="logo">
-        <img src="/favicon.ico" alt="GWT Logo" />
-    </div>
-    <h1>GWT</h1>
-</header>
+        <div class="logo">
+            <img src="/favicon.ico" alt="GWT Logo" />
+        </div>
+        <h1>GWT - сайт планирования садовых работ</h1> 
+    </header>
     <section class="main">
         <section class="tasks" v-if="gardenWorkTasks.length > 0">
-            <h2>Garden Work Tasks:</h2>
-            <h3 v-if="todayGardenWorkTasks.length > 0">Today:</h3>
+            <h2>Садовые задачи:</h2>
+            <h3 v-if="todayGardenWorkTasks.length > 0">Сегодня:</h3>
             <TaskList :tasks="todayGardenWorkTasks" :switchIsFinished="switchIsFinished"
                 :deleteTask="deleteGardenWorkTask" />
-            <h3 v-if="futureGardenWorkTasks.length > 0">Future:</h3>
+            <h3 v-if="futureGardenWorkTasks.length > 0">Предстоящие задачи:</h3>
             <TaskList :tasks="futureGardenWorkTasks" :switchIsFinished="switchIsFinished"
                 :deleteTask="deleteGardenWorkTask" />
-            <h3 v-if="pastGardenWorkTasks.length > 0">Past:</h3>
+            <h3 v-if="pastGardenWorkTasks.length > 0">Прошедшие задачи:</h3>
             <TaskList :tasks="pastGardenWorkTasks" :switchIsFinished="switchIsFinished"
                 :deleteTask="deleteGardenWorkTask" />
         </section>
         <section>
             <form>
-                <label for="taskName">Task Name:</label>
+                <label for="taskName">Введите название задачи:</label>
                 <input type="text" id="taskName" autocomplete="off" v-model="taskName" required />
 
-                <label for="taskTypes">Task Type:</label>
+                <label for="taskTypes">Выберите тип задачи:</label>
                 <select id="taskTypes" v-model="taskType" name="taskTypes">
                     <option value="Посадка">Посадка</option>
                     <option value="Полив">Полив</option>
                     <option value="Удобрение">Удобрение</option>
                     <option value="Обрезка">Обрезка</option>
                     <option value="Другое">Другое</option>
-                    <option value="" selected disabled hidden>Choose here</option>
+                    <option value="" selected disabled hidden>Выберите здесь</option>
                 </select>
 
-                <label for="taskDescription">Task description: </label>
+                <label for="taskDescription">Введите описание задачи: </label>
                 <input type="text" id="taskDescription" autocomplete="off" v-model="taskDescription" required />
 
-                <label for="taskData">Task data: </label>
+                <label for="taskData">Выберите дату задачи: </label>
                 <input type="date" id="taskData" v-model="taskData" required />
 
                 <button type="submit"
-                    @click.prevent="saveGardenWorkTask(taskName, taskType, taskDescription, taskData)">Save
-                    Task</button>
+                    @click.prevent="saveGardenWorkTask(taskName, taskType, taskDescription, taskData)">Сохранить
+                    задачу</button>
             </form>
         </section>
-        <section>
+        <section class="dataPicker">
             <VDatePicker :masks="masks" :attributes="calendarAttributes" @update:pages="onDateChange" />
         </section>
 
         <section class="advice">
-            <h2>Advice for month:</h2>
+            <h2>Советы для выбранного месяца:</h2>
             <p>{{ currentAdvice }}</p>
+            <a :href="currentAdviceLink" target="_blank" open>Подрабнее по ссылке</a>
         </section>
     </section>
+    <footer>
+        <div class="footer">
+            <p>&copy; 2024 Garden Work Tasks. All rights reserved.</p>
+            <div class="social-links">
+                <a href="https://t.me/olegsus2" target="_blank" class="social-icon">Telegram</a>
+                <a href="https://vk.com/olegik336" target="_blank" class="social-icon">VK</a>
+            </div>
+        </div>
+    </footer>
+</div>
 </template>
 
 <style scoped>
+.dataPicker{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container{
+    display: block;
+}
+
+footer {
+    position: relative;
+    margin: 30px;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+    margin-top: 30px;
+}
+
+.footer p {
+    margin: 10px 0;
+}
+
+.social-links {
+    margin-top: 10px;
+}
+
+.social-icon {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 16px;
+}
+
+.social-icon:hover {
+    text-decoration: underline;
+}
 .header {
+    margin-top: 0;
     position: absolute;
     top: 0;
     left: 0;
@@ -295,6 +350,7 @@ onMounted(() => {
     justify-content: center;
     color: white;
     padding: 10px 20px;
+    align-self: flex-start;
 }
 
 .logo img {
@@ -321,13 +377,12 @@ h1 {
 .main {
     font-family: Arial, sans-serif;
     background-color: #181818;
-    margin: 0;
     padding: 20px;
     display: flex;
     align-items: center;
     color: white;
     max-width: fit-content;
-    justify-content: space-between; 
+    justify-content: center; 
 }
 
 .tasks {
@@ -339,7 +394,7 @@ section {
     width: 100%;
     margin: 20px auto;
     padding: 20px;
-    max-height: 500px;
+    max-height: fit-content;
 }
 
 form {
@@ -391,6 +446,14 @@ p {
     margin-top: 20px;
 }
 
+.logoText{
+    font-size: 14px;
+    color: #ccc;
+    text-align: center;
+    margin-left: 10px;
+    margin-bottom: 20px;
+}
+
 .tasks {
     display: flex;
     flex-direction: column;
@@ -410,19 +473,7 @@ li {
 @media (max-width: 1500px) {
     .main {
         flex-wrap: wrap;
-    }
-
-    section {
-        width: 100%;
-        max-width: 500px;
-    }
-}
-
-@media (max-width: 1000px) {
-    .main {
-        flex-direction: column;
-        align-items: center;
-        flex-wrap: nowrap;
+        margin-top: 100px;
     }
 
     section {
