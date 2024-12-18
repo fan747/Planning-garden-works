@@ -13,7 +13,12 @@ app.use(express.static('public'));
 
 const moongoose = require('mongoose');
 
-moongoose.connect('mongodb://localhost/planning-garden-works-app')
+moongoose.connect('mongodb://localhost/planning-garden-works-app', {
+  }).then(() => {
+    console.log('Успешное подключение к MongoDB');
+  }).catch(err => {
+    console.error('Ошибка подключения к MongoDB:', err);
+  });
 
 const gardenWorkTaskSchema = new moongoose.Schema({
     user_id:{
@@ -47,7 +52,31 @@ const gardenWorkTaskSchema = new moongoose.Schema({
     timestamps: true,
 });
 
-const Product = moongoose.model('garden-work-tasks', gardenWorkTaskSchema);
+const adviceSchema = new moongoose.Schema({
+    month: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 12
+    },
+    data: {
+      type: String,
+      required: true
+    },
+    list_of_work_link: {
+      type: String,
+      required: true,
+      validate: {
+        validator: function (v) {
+          return /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/.test(v);
+        },
+        message: props => `${props.value} не является допустимым URL!`
+      }
+    }
+});
+
+const GardenWorkTask = moongoose.model('garden-work-tasks', gardenWorkTaskSchema);
+const GardenWorkCalendar = moongoose.model('garden-work-calendars', adviceSchema);
 
 app.get('/garden-tasks/', async (req, res) => {
     let id = req.query.user_id
@@ -58,7 +87,7 @@ app.get('/garden-tasks/', async (req, res) => {
     }
 
     try {
-        let data = await Product.find({ user_id: id }).sort({ date: 1 });
+        let data = await GardenWorkTask.find({ user_id: id }).sort({ date: 1 });
         res.json(data);  
     } catch (error) {
         console.error('Ошибка при получении задач:', error);
@@ -79,7 +108,7 @@ app.post('/garden-tasks/', async (req, res) => {
     }
 
     try {
-        let task = new Product({ user_id, name, description, task_type, date });
+        let task = new GardenWorkTask({ user_id, name, description, task_type, date });
         await task.save();
         res.json(task);
     } catch (error) {
@@ -98,7 +127,7 @@ app.put('/garden-tasks/', async (req, res) => {
     }
 
     try {
-        let task = await Product.findByIdAndUpdate(
+        let task = await GardenWorkTask.findByIdAndUpdate(
             { _id: id },
             { $set: { is_finished: isFinished } }, 
             { new: true }
@@ -112,3 +141,38 @@ app.put('/garden-tasks/', async (req, res) => {
         res.status(500).json({ error: 'Ошибка при сохранении задачи' });
     }
 });
+
+app.delete('/delete-tasks/', async (req, res) => {
+    let id = req.query.id; 
+
+    if (!id) {
+        console.log('Ошибка при получении id:', id);
+        return res.status(400).json({ error: 'Необходимо заполнить id' });
+    }
+
+    try {
+        let task = await GardenWorkTask.findByIdAndDelete(id);
+
+        if (!task) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+
+        res.json({ message: 'Задача успешно удалена', task });
+    } catch (error) {
+        console.error('Ошибка при удалении задачи:', error);
+        res.status(500).json({ error: 'Ошибка при удалении задачи' });
+    }
+});
+
+
+app.get('/garden-advices/', async function (req, res) { 
+    try {
+        let data = await GardenWorkCalendar.find();
+        res.json(data);  
+    } catch (error) {
+        console.error('Ошибка при получении совета:', error);
+        res.status(500).json({ error: 'Ошибка при получении совета' });
+    }
+});
+
+

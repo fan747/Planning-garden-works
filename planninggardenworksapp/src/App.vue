@@ -8,9 +8,8 @@ export default {
 </script>
 
 <template>
-  <RouterView />
+  <RouterView class="router"/>
 </template>
 
 <style scoped>
-
 </style>
