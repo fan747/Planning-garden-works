@@ -1,7 +1,19 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const app = express();
 const cors = require('cors');
 const port = process.env.PORT || 3000;
+const User = require('./src/models/User');
+const crypto = require('crypto');
+
+require('dotenv').config();
+const secretKey = process.env.JWT_SECRET; 
+
+if (!secretKey) {
+    console.error('Ошибка: JWT_SECRET не задан в .env файле');
+    process.exit(1); 
+}
+
 
 app.listen(port, function () {
     console.log(`Server is running on port ${port}`);
@@ -22,7 +34,7 @@ moongoose.connect('mongodb://localhost/planning-garden-works-app', {
 
 const gardenWorkTaskSchema = new moongoose.Schema({
     user_id:{
-        type: String,
+        type: moongoose.Schema.Types.ObjectId,
         required: true,
     },
     name:{
@@ -78,8 +90,72 @@ const adviceSchema = new moongoose.Schema({
 const GardenWorkTask = moongoose.model('garden-work-tasks', gardenWorkTaskSchema);
 const GardenWorkCalendar = moongoose.model('garden-work-calendars', adviceSchema);
 
-app.get('/garden-tasks/', async (req, res) => {
-    let id = req.query.user_id
+const authenticateToken = (req, res, next) => {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+  
+    if (!token) {
+      return res.status(401).json({ error: 'Токен не найден, доступ запрещен' });
+    }
+  
+    try {
+      const decoded = jwt.verify(token, secretKey);
+      req.user = decoded; 
+      next(); 
+    } catch (error) {
+      return res.status(403).json({ error: 'Токен недействителен или истек' });
+    }
+  };
+
+app.post('/register', async (req, res) => {
+    const { username, email, password } = req.body;
+    try {
+        let existingUser = await User.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Пользователь с таким username уже существует' });
+        }
+
+        existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+        }
+
+        if (password.lenght < 6 ) {
+            return res.status(400).json({ error: 'Пароль должен иметь минимум 6 символов' });
+        }
+        const user = new User({ username, email, password });
+        await user.save();
+        const token = jwt.sign({ userID: user._id }, secretKey, { expiresIn: '1h' });
+
+        res.json({ message: 'Пользователь успешно зарегистрирован', token });
+    } catch (error) {
+        res.status(400).json({ error: 'Ошибка регистрации', details: error });
+    }
+});
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(401).json({ error: 'Пользователь не найден' });
+        }
+
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Неверный пароль' });
+        }
+
+        const token = jwt.sign({ userID: user._id }, secretKey, { expiresIn: '1h' });
+
+        res.json({ token });
+    } catch (error) {
+        console.error('Ошибка входа:', error);
+        res.status(500).json({ error: 'Ошибка входа', details: error });
+    }
+});
+
+app.get('/garden-tasks/', authenticateToken, async (req, res) => {
+    let id = req.user.userID;
 
     if (!id)
     {
@@ -95,20 +171,22 @@ app.get('/garden-tasks/', async (req, res) => {
     }
 });
 
-app.post('/garden-tasks/', async (req, res) => {
-    let user_id = req.body.user_id;
-    let name = req.body.name;
-    let description = req.body.description;
-    let task_type = req.body.task_type;
-    let date = req.body.date;
+app.post('/garden-tasks/', authenticateToken, async (req, res) => {
+    let user_id = req.user.userID; 
+    let { name, description, task_type, date } = req.body;
 
-    if (!user_id || !name || !description || !task_type)
-    {
+    if (!user_id || !name || !description || !task_type || !date) {
         return res.status(400).json({ error: 'Необходимо заполнить все поля' });
     }
 
     try {
-        let task = new GardenWorkTask({ user_id, name, description, task_type, date });
+        user_id = new moongoose.Types.ObjectId(user_id);
+    } catch (err) {
+        return res.status(400).json({ error: 'Некорректный формат user_id' });
+    }
+
+    try {
+        const task = new GardenWorkTask({ user_id, name, description, task_type, date });
         await task.save();
         res.json(task);
     } catch (error) {
@@ -117,32 +195,30 @@ app.post('/garden-tasks/', async (req, res) => {
     }
 });
 
-app.put('/garden-tasks/', async (req, res) => {
-    let id = req.query.id; 
+app.put('/garden-tasks/', authenticateToken, async (req, res) => {
+    let taskId = req.query.id;
     let isFinished = req.body.is_finished; 
 
-    if (!id) {
-        console.log('Ошибка при получении id:', id);
-        return res.status(400).json({ error: 'Необходимо заполнить id' });
-    }
-
     try {
-        let task = await GardenWorkTask.findByIdAndUpdate(
-            { _id: id },
+        let updatedTask = await GardenWorkTask.findByIdAndUpdate(
+            taskId, 
             { $set: { is_finished: isFinished } }, 
             { new: true }
         );
-        if (!task) {
-            return res.status(404).json({ error: 'Задача не найдена' });
+
+        if (!updatedTask) {
+            return res.status(404).json({ error: 'Задача не найдена при обновлении' });
         }
-        res.json(task);
+
+        res.json(updatedTask);
     } catch (error) {
-        console.error('Ошибка при сохранении задачи:', error);
-        res.status(500).json({ error: 'Ошибка при сохранении задачи' });
+        console.error('Ошибка при обновлении задачи:', error);
+        res.status(500).json({ error: 'Ошибка при обновлении задачи' });
     }
 });
 
-app.delete('/delete-tasks/', async (req, res) => {
+
+app.delete('/delete-tasks/',authenticateToken, async (req, res) => {
     let id = req.query.id; 
 
     if (!id) {

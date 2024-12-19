@@ -14,6 +14,7 @@ import "vue-toastification/dist/index.css";
 
 import TaskList from './props/TaskList.vue';
 
+
 const app = createApp(App)
 
 if ('serviceWorker' in navigator) {
