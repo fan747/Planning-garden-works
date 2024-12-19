@@ -47,6 +47,11 @@
                                 required />
                         </div>
 
+                        <div class="input-container-terms">
+                            <input v-model="registerForm.isAgreeProcessingPersonalData" class="agree-terms" type="checkbox" id="agree-terms" name="agree-terms" required />
+                            <label for="agree-terms">Cогласен с обработкой персональных данных</label>
+                        </div>
+
                         <div class="button-container">
                             <button type="submit">Зарегистрироваться</button>
                             <button @click="isLogin = true">Назад к входу</button>
@@ -76,6 +81,7 @@ var registerForm= ref( {
         email: "",
         password: "",
         confirmPassword: "",
+        isAgreeProcessingPersonalData: false
       });
 
 function handleLogin() {
@@ -134,7 +140,7 @@ input{
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-top: 30px;
+    margin-top: 10px;
     max-width: 300px;
 }
 form {
@@ -146,6 +152,22 @@ form {
     gap: 10px;
     margin-top: 30px;
 }
+
+.input-container-terms
+{
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.agree-terms {
+    margin-right: 5px;
+    min-width: 10px;
+    min-height: 10px;
+}
+
 
 button {
     padding: 10px 15px;
