@@ -221,10 +221,10 @@ export const useGardenTasksStore = defineStore('gardenTasks', {
         return;
       }
 
-      const todayTasks = this.todayGardenWorkTasks.map(task => `${task.name} - ${task.description}`).join('\n');
+      const todayTasks = this.todayGardenWorkTasks.map(task => `${task.name} - ${task.description} - ${task.task_type}`).join('\n');
 
       if (Notification.permission === 'granted') {
-        const notification = new Notification('Today tasks:', {
+        const notification = new Notification('Задачи на сегодня:', {
           body: todayTasks,
           icon: 'icon.png'
         });

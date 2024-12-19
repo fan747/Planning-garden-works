@@ -4,7 +4,8 @@ const app = express();
 const cors = require('cors');
 const port = process.env.PORT || 3000;
 const User = require('./src/models/User');
-const crypto = require('crypto');
+const GardenWorkTask = require('./src/models/GardenWorkTask');
+const GardenAdvice = require('./src/models/GardenAdvice');
 
 require('dotenv').config();
 const secretKey = process.env.JWT_SECRET; 
@@ -32,63 +33,6 @@ moongoose.connect('mongodb://localhost/planning-garden-works-app', {
     console.error('Ошибка подключения к MongoDB:', err);
   });
 
-const gardenWorkTaskSchema = new moongoose.Schema({
-    user_id:{
-        type: moongoose.Schema.Types.ObjectId,
-        required: true,
-    },
-    name:{
-        type: String,
-        required: true,
-    },
-    
-    description: {
-        type: String,
-    },
-
-    task_type: {
-        type: String,
-        required: true
-    },
-
-    date: {
-        type: String,
-        required: true
-    },
-
-    is_finished: {
-        type: Boolean,
-        default: false,
-    },
-},{
-    timestamps: true,
-});
-
-const adviceSchema = new moongoose.Schema({
-    month: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 12
-    },
-    data: {
-      type: String,
-      required: true
-    },
-    list_of_work_link: {
-      type: String,
-      required: true,
-      validate: {
-        validator: function (v) {
-          return /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/.test(v);
-        },
-        message: props => `${props.value} не является допустимым URL!`
-      }
-    }
-});
-
-const GardenWorkTask = moongoose.model('garden-work-tasks', gardenWorkTaskSchema);
-const GardenWorkCalendar = moongoose.model('garden-work-calendars', adviceSchema);
 
 const authenticateToken = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -243,7 +187,7 @@ app.delete('/delete-tasks/',authenticateToken, async (req, res) => {
 
 app.get('/garden-advices/', async function (req, res) { 
     try {
-        let data = await GardenWorkCalendar.find();
+        let data = await GardenAdvice.find();
         res.json(data);  
     } catch (error) {
         console.error('Ошибка при получении совета:', error);

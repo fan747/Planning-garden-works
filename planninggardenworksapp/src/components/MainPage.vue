@@ -242,7 +242,6 @@ li {
 @media (max-width: 1500px) {
     .main {
         flex-wrap: wrap;
-        margin-top: 100px;
     }
 
     section {
